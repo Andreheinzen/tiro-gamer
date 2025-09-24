@@ -12,6 +12,7 @@ const asteroidSpeed = 2;
 let score = 0;
 let playerName = '';
 let isGameRunning = false;
+let isShooting = false; // Flag para controlar o tempo de disparo
 
 // Estrelas para o fundo
 const stars = [];
@@ -44,6 +45,28 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('keyup', (e) => {
     keys[e.key] = false;
+});
+
+// NOVO: Eventos de mouse para atirar
+document.addEventListener('mousedown', (e) => {
+    // 0: Botão esquerdo, 1: Roda do mouse, 2: Botão direito
+    if (isGameRunning && e.button === 2 && !isShooting) {
+        bullets.push({
+            x: player.x - 2.5,
+            y: player.y,
+            width: 5,
+            height: 10
+        });
+        isShooting = true;
+        setTimeout(() => {
+            isShooting = false;
+        }, 200); // Cooldown de 200ms
+    }
+});
+
+// NOVO: Previne o menu de contexto padrão do navegador
+canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
 });
 
 // Evento de clique no botão de jogar
@@ -120,16 +143,17 @@ function updatePlayer() {
     if (keys['ArrowRight'] && player.x < canvas.width - player.width / 2) {
         player.x += playerSpeed;
     }
-    if (keys[' '] && !player.isShooting) {
+    // Lógica para atirar com a barra de espaço (mantida)
+    if (keys[' '] && !isShooting) {
         bullets.push({
             x: player.x - 2.5,
             y: player.y,
             width: 5,
             height: 10
         });
-        player.isShooting = true;
+        isShooting = true;
         setTimeout(() => {
-            player.isShooting = false;
+            isShooting = false;
         }, 200);
     }
 }
@@ -140,4 +164,35 @@ function createAsteroids() {
         asteroids.push({
             x: Math.random() * canvas.width,
             y: -20,
-            radius: Math.random()
+            radius: Math.random() * 20 + 10,
+        });
+    }
+}
+
+// Loop principal do jogo
+function gameLoop() {
+    if (!isGameRunning) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawBackground();
+    updatePlayer();
+    drawPlayer();
+
+    for (let i = 0; i < bullets.length; i++) {
+        bullets[i].y -= bulletSpeed;
+        drawBullet(bullets[i]);
+        if (bullets[i].y < 0) {
+            bullets.splice(i, 1);
+            i--;
+        }
+    }
+
+    createAsteroids();
+    for (let i = 0; i < asteroids.length; i++) {
+        asteroids[i].y += asteroidSpeed;
+        drawAsteroid(asteroids[i]);
+        for (let j = 0; j < bullets.length; j++) {
+            const dx = bullets[j].x - asteroids[i].x;
+            const dy = bullets[j].y - asteroids[i].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
