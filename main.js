@@ -1,10 +1,20 @@
-// Acessando o canvas e o contexto 2D
+// Acessando o canvas e os elementos do placar
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
+const highScoreElement = document.getElementById('highScore');
 
-// Ajusta o tamanho do canvas para a janela do navegador
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Ajusta o tamanho do canvas para a janela
+canvas.width = 800;
+canvas.height = 600;
+
+// Variáveis do jogo
+let score = 0;
+let highScore = localStorage.getItem('highScore') || 0;
+let isGameOver = false;
+
+// Atualiza o display da melhor pontuação
+highScoreElement.innerText = highScore;
 
 // Objeto do jogador
 const player = {
@@ -13,81 +23,155 @@ const player = {
     width: 30,
     height: 30,
     speed: 5,
-    dx: 0, // Delta X: para controle de movimento horizontal
-    dy: 0, // Delta Y: para controle de movimento vertical
 };
+
+// Arrays para guardar os tiros e os morcegos
+const bullets = [];
+const bats = [];
 
 // Funções para desenhar
 function drawPlayer() {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.width / 2, 0, Math.PI * 2);
     ctx.fillStyle = '#00ff00';
-    ctx.fill();
-    ctx.closePath();
+    ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+}
+
+function drawBullets() {
+    ctx.fillStyle = '#ffff00';
+    bullets.forEach(bullet => {
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+    });
+}
+
+function drawBats() {
+    ctx.fillStyle = '#ff00ff';
+    bats.forEach(bat => {
+        ctx.fillRect(bat.x, bat.y, bat.width, bat.height);
+    });
 }
 
 // Funções para mover
-function update() {
-    // Limpa a tela
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Atualiza a posição do jogador
-    player.x += player.dx;
-    player.y += player.dy;
+function updatePlayer(e) {
+    if (e.key === 'ArrowLeft' || e.key === 'a') {
+        player.x -= player.speed;
+    } else if (e.key === 'ArrowRight' || e.key === 'd') {
+        player.x += player.speed;
+    }
 
     // Garante que o jogador não saia da tela
-    if (player.x - player.width / 2 < 0) {
+    if (player.x < player.width / 2) {
         player.x = player.width / 2;
     }
-    if (player.x + player.width / 2 > canvas.width) {
+    if (player.x > canvas.width - player.width / 2) {
         player.x = canvas.width - player.width / 2;
     }
-    if (player.y - player.height / 2 < 0) {
-        player.y = player.height / 2;
+}
+
+function updateBullets() {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        bullets[i].y -= bullets[i].speed;
+
+        // Remove tiros que saíram da tela
+        if (bullets[i].y < 0) {
+            bullets.splice(i, 1);
+        }
     }
-    if (player.y + player.height / 2 > canvas.height) {
-        player.y = canvas.height - player.height / 2;
+}
+
+function updateBats() {
+    for (let i = bats.length - 1; i >= 0; i--) {
+        bats[i].y += bats[i].speed;
+
+        // Verifica se o morcego chegou ao final da tela
+        if (bats[i].y > canvas.height) {
+            isGameOver = true;
+            return;
+        }
+    }
+}
+
+// Disparar
+function shoot() {
+    const bullet = {
+        x: player.x,
+        y: player.y - player.height / 2,
+        width: 5,
+        height: 10,
+        speed: 7,
+    };
+    bullets.push(bullet);
+}
+
+// Spawn dos morcegos
+function spawnBat() {
+    const bat = {
+        x: Math.random() * (canvas.width - 20) + 10,
+        y: -20,
+        width: 20,
+        height: 20,
+        speed: Math.random() * 2 + 1,
+    };
+    bats.push(bat);
+}
+
+// Colisão e pontuação
+function checkCollisions() {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        for (let j = bats.length - 1; j >= 0; j--) {
+            if (
+                bullets[i].x < bats[j].x + bats[j].width &&
+                bullets[i].x + bullets[i].width > bats[j].x &&
+                bullets[i].y < bats[j].y + bats[j].height &&
+                bullets[i].y + bullets[i].height > bats[j].y
+            ) {
+                // Colisão detectada!
+                bullets.splice(i, 1);
+                bats.splice(j, 1);
+                score++;
+                scoreElement.innerText = score;
+
+                // Para evitar erros de índice após a remoção
+                break;
+            }
+        }
+    }
+}
+
+// Loop principal do jogo
+function gameLoop() {
+    if (isGameOver) {
+        // Atualiza a melhor pontuação se a pontuação atual for maior
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('highScore', highScore);
+            highScoreElement.innerText = highScore;
+        }
+        alert(`Fim de Jogo! Sua pontuação foi: ${score}`);
+        return;
     }
 
-    // Desenha o jogador na nova posição
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    updateBullets();
+    updateBats();
+    checkCollisions();
+
     drawPlayer();
+    drawBullets();
+    drawBats();
 
-    // Chama a si mesma para criar um loop
-    requestAnimationFrame(update);
+    requestAnimationFrame(gameLoop);
 }
 
 // Eventos de teclado
-function keyDown(e) {
-    if (e.key === 'ArrowRight' || e.key === 'd') {
-        player.dx = player.speed;
-    } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-        player.dx = -player.speed;
-    } else if (e.key === 'ArrowUp' || e.key === 'w') {
-        player.dy = -player.speed;
-    } else if (e.key === 'ArrowDown' || e.key === 's') {
-        player.dy = player.speed;
+document.addEventListener('keydown', updatePlayer);
+document.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Spacebar') {
+        shoot();
     }
-}
+});
 
-function keyUp(e) {
-    if (
-        e.key === 'ArrowRight' ||
-        e.key === 'd' ||
-        e.key === 'ArrowLeft' ||
-        e.key === 'a' ||
-        e.key === 'ArrowUp' ||
-        e.key === 'w' ||
-        e.key === 'ArrowDown' ||
-        e.key === 's'
-    ) {
-        player.dx = 0;
-        player.dy = 0;
-    }
-}
-
-// Adiciona os event listeners
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
+// Spawn dos morcegos a cada 1.5 segundos
+setInterval(spawnBat, 1500);
 
 // Inicia o jogo
-update();
+gameLoop();
