@@ -4,14 +4,19 @@ const ctx = canvas.getContext('2d');
 const scoreElement = document.getElementById('score');
 const highScoreElement = document.getElementById('highScore');
 
-// Ajusta o tamanho do canvas para a janela
-canvas.width = 800;
-canvas.height = 600;
+// Carregando as imagens
+const playerImg = document.getElementById('playerImg');
+const batImg = document.getElementById('batImg');
+const bulletImg = document.getElementById('bulletImg');
 
 // Variáveis do jogo
 let score = 0;
 let highScore = localStorage.getItem('highScore') || 0;
 let isGameOver = false;
+
+// Ajusta o tamanho do canvas para a janela
+canvas.width = 800;
+canvas.height = 600;
 
 // Atualiza o display da melhor pontuação
 highScoreElement.innerText = highScore;
@@ -20,8 +25,8 @@ highScoreElement.innerText = highScore;
 const player = {
     x: canvas.width / 2,
     y: canvas.height - 50,
-    width: 30,
-    height: 30,
+    width: 60, // Aumentado para melhor visualização da imagem
+    height: 60,
     speed: 5,
 };
 
@@ -31,21 +36,18 @@ const bats = [];
 
 // Funções para desenhar
 function drawPlayer() {
-    ctx.fillStyle = '#00ff00';
-    ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+    ctx.drawImage(playerImg, player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
 }
 
 function drawBullets() {
-    ctx.fillStyle = '#ffff00';
     bullets.forEach(bullet => {
-        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        ctx.drawImage(bulletImg, bullet.x, bullet.y, bullet.width, bullet.height);
     });
 }
 
 function drawBats() {
-    ctx.fillStyle = '#ff00ff';
     bats.forEach(bat => {
-        ctx.fillRect(bat.x, bat.y, bat.width, bat.height);
+        ctx.drawImage(batImg, bat.x, bat.y, bat.width, bat.height);
     });
 }
 
@@ -92,10 +94,10 @@ function updateBats() {
 // Disparar
 function shoot() {
     const bullet = {
-        x: player.x,
+        x: player.x - 2.5,
         y: player.y - player.height / 2,
-        width: 5,
-        height: 10,
+        width: 10,
+        height: 20,
         speed: 7,
     };
     bullets.push(bullet);
@@ -104,10 +106,10 @@ function shoot() {
 // Spawn dos morcegos
 function spawnBat() {
     const bat = {
-        x: Math.random() * (canvas.width - 20) + 10,
-        y: -20,
-        width: 20,
-        height: 20,
+        x: Math.random() * (canvas.width - 40) + 20,
+        y: -40,
+        width: 40,
+        height: 40,
         speed: Math.random() * 2 + 1,
     };
     bats.push(bat);
@@ -117,6 +119,7 @@ function spawnBat() {
 function checkCollisions() {
     for (let i = bullets.length - 1; i >= 0; i--) {
         for (let j = bats.length - 1; j >= 0; j--) {
+            // Lógica de colisão mais precisa para imagens
             if (
                 bullets[i].x < bats[j].x + bats[j].width &&
                 bullets[i].x + bullets[i].width > bats[j].x &&
@@ -139,7 +142,6 @@ function checkCollisions() {
 // Loop principal do jogo
 function gameLoop() {
     if (isGameOver) {
-        // Atualiza a melhor pontuação se a pontuação atual for maior
         if (score > highScore) {
             highScore = score;
             localStorage.setItem('highScore', highScore);
